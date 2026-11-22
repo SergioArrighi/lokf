@@ -1,9 +1,9 @@
 # __KB_TITLE__
 
-A [LOKF](https://lokf.nolan-nichols.com) knowledge base. Every markdown file in
-`knowledge/` is one concept; together they are a queryable knowledge graph
-*and* this website — an [Astro](https://astro.build) site with concept pages,
-full-text search, and an interactive graph browser.
+A [LOKF](https://lokf.nolan-nichols.com) knowledge base. Each concept file in
+`knowledge/` contributes one record to the queryable graph and one page to the
+[Astro](https://astro.build) site. Readers can search the concepts, explore
+their connections on the **Graph** tab, or look up their types on the **Schema** tab.
 
 ## Author
 
@@ -57,15 +57,16 @@ just site     # build the static site into dist/
 
 just serve    # SPARQL endpoint + graph explorer (lokf toolkit, via uvx)
 just rdf      # project the bundle to RDF / Turtle
-just validate # check the bundle against the LOKF schema
+just validate # check the bundle against its schema
 just tables   # project the bundle to linked tables (CSV)
 ```
 
 The `lokf` recipes use `uvx`, so no `pip install` is needed. For a local toolkit
 checkout, set `LOKF_EXPORT_EXECUTABLE` to its `lokf` executable when building
-the site. Set `LOKF_TOOLKIT_SPEC` to override the pinned package spec. The
-default includes the `build` extra, whose LinkML reads a domain vocabulary
-declared in `pyproject.toml`.
+the site. The site exporter and the `serve`, `rdf`, and `validate` recipes
+use `lokf[build]==__LOKF_PACKAGE_VERSION__` by default. Set `LOKF_TOOLKIT_SPEC`
+to use a different build-enabled package for those commands. The `tables`
+recipe uses the matching release with the `tables` extra.
 
 If you created this project **from a LOKF source revision between releases**,
 use the same revision for local and Pages builds. With a local checkout,
@@ -102,3 +103,34 @@ trust tier; those signals do not prove a concept's claims.
 This knowledge base may be authored with AI assistance. You own everything you
 commit — understand it, verify it, and don't credit an AI as a co-author. See
 the [LOKF AI Covenant](https://github.com/nicholsn/lokf/blob/main/AI_COVENANT.md).
+
+## Schema browser
+
+New sites enable `schemaBrowser: true` in `site.config.mjs`, adding a **Schema** tab at `/schema`.
+The build exports the configured LinkML schema, including imported and abstract
+classes, even when no records use them. The browser documents LOKF by default.
+To use your own vocabulary, add its path to the project's `pyproject.toml`.
+
+```toml
+[tool.lokf]
+schema = "schema/my-domain.yaml"
+```
+
+The path is relative to that file. To inspect the same vocabulary in the CLI,
+run `lokf vocab --bundle knowledge --all`. In an MCP client, call
+`get_vocabulary` with `{"bundle": "knowledge", "all": true}` when the server
+runs from this project's root, or pass the absolute bundle path.
+
+The overview has searchable class, slot, enumeration and datatype indexes.
+Class pages show inheritance, mixins and effective slot ranges and constraints,
+including class-specific overrides. The Cytoscape diagram starts with domain
+classes, limits each view to 70 types, and lets readers focus on a class and its
+neighbors. Dashed edges show inheritance; labeled edges show class-valued slots.
+The linked reference tables also work without JavaScript.
+
+Set `schemaBrowser: false` to omit the tab and its routes. Enabling it reserves
+`schema/`; the build fails if a concept or view would collide with that path.
+For an existing site, copy the schema pages, component, helpers, export script
+and navigation integration from the current template. The exporter must support
+`lokf export --schema-docs`, which adds a separate `schema.json` artifact without
+changing the instance graph or the four-file registry producer contract.

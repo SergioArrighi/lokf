@@ -969,6 +969,9 @@ def export(
     schema: Optional[Path] = typer.Option(
         None, "--schema", "-s", exists=True, dir_okay=False, help=_SCHEMA_HELP
     ),
+    schema_docs: bool = typer.Option(
+        False, "--schema-docs", help="Also export the resolved data model as schema.json.",
+    ),
     views: Optional[Path] = typer.Option(
         None, "--views", exists=True, dir_okay=False,
         help="Compile a static-site view manifest into views.json alongside the graph.",
@@ -988,6 +991,10 @@ def export(
     - ``concepts.jsonld`` — every concept's frontmatter + body under one
       ``@context``/``@graph``; lets a registry read a foreign concept's source
       document offline, without re-fetching the markdown.
+
+    With ``--schema-docs``, also write ``schema.json`` with the resolved LinkML
+    definitions for the schema browser. Use ``--schema`` to select a domain
+    vocabulary explicitly, or declare it in the project's pyproject.toml.
 
     With ``--views lokf.views.yaml``, also write ``views.json`` for the site's
     navigation indexes, concept sections, and return links. A subsequent
@@ -1015,6 +1022,10 @@ def export(
         except (ValueError, OSError) as exc:
             _err(str(exc))
             raise typer.Exit(2)
+    documentation = None
+    if schema_docs:
+        from lokf.schema_docs import schema_documentation
+        documentation = schema_documentation(schema)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "graph.json").write_text(json.dumps(graph, indent=2), encoding="utf-8")
     (out_dir / "datasets.jsonld").write_text(
@@ -1031,6 +1042,10 @@ def export(
         json.dumps({"@context": ctx, "@graph": bundle.docs()}, indent=2),
         encoding="utf-8",
     )
+    if documentation is not None:
+        (out_dir / "schema.json").write_text(
+            json.dumps(documentation, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
     view_path = out_dir / "views.json"
     if view_plan is not None:
         view_path.write_text(
